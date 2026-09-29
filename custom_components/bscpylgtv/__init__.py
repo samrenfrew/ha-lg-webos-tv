@@ -33,6 +33,7 @@ from .coordinator import (
     BscpylgtvConfigEntry,
     BscpylgtvCoordinator,
     async_connect_with_manifest_fallback,
+    async_fetch_static_info,
     async_probe_device_uuid,
     extract_mac,
     make_runtime_client,
@@ -248,13 +249,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: BscpylgtvConfigEntry) ->
             translation_key="auth_failed",
             translation_placeholders={"device": entry.title},
         ) from err
-    except BSCP_CONNECTION_EXCEPTIONS:
-        LOGGER.debug("TV unreachable during setup; entities will show unavailable")
+    except BSCP_CONNECTION_EXCEPTIONS as err:
+        LOGGER.debug(
+            "TV unreachable during setup (%r); entities will show unavailable", err
+        )
     else:
         connected = True
 
     if connected:
         coordinator.client = client
+        await async_fetch_static_info(client)
         # Lazy v1 -> v2 unique_id fix (bounded hello probe, MAC fallback).
         await _async_update_unique_id(hass, entry, client)
         update_client_key(hass, entry, client)

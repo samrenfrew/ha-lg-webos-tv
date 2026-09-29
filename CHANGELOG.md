@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.4
+
+### Fixed
+
+*   **TV always shown as off on sets that refuse `getSystemInfo`.** Some
+    webOS 24/25 sets (seen on an LG UT91006LA, webOS TV 24 33.22.56) answer
+    the system-info request with `401 insufficient permissions` while every
+    other request works. `bscpylgtv` fetches system and software info during
+    connect without error handling, so every connect failed, the TV showed
+    as off and no commands could be sent. With a stored MAC this failed
+    silently. The integration now fetches both itself after connecting,
+    best effort, so a refused request only leaves the model name blank.
+    Reconnect and setup failures are now logged at debug level, and the
+    reconfigure flow checks the stored key with the software-info request
+    instead of system info.
+
 ## 2.0.3
 
 ### Fixed
