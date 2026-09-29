@@ -569,7 +569,7 @@ async def test_reconfigure_stale_key_repair(
     entry = build_mock_config_entry(hass, host="192.168.1.99", client_key="stale-key")
     stale = _runtime_client(tv, key="stale-key")
     # The key survives registration but every real command fails.
-    stale.get_system_info = AsyncMock(side_effect=OSError("stale key"))  # type: ignore[method-assign]
+    stale.get_software_info = AsyncMock(side_effect=OSError("stale key"))  # type: ignore[method-assign]
     fresh = tv.create_client(HOST, client_key=None)
     fresh._connected = True  # noqa: SLF001
 

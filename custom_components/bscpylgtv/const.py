@@ -53,15 +53,21 @@ ATTR_SOUND_OUTPUT = "sound_output"
 
 LIVE_TV_APP_ID = "com.webos.app.livetv"
 
-# Exactly the library's default subscription set (webos_client.py). Do NOT
-# add channels/current_channel/channel_info: connect-time subscription
-# failures are only tolerated for PyLGTVCmdError/PyLGTVServiceNotFoundError;
-# the channels trio is auto-subscribed lazily and safely once Live TV is in
-# the foreground (plan AD-2). Must stay a list: the library constructor does
+# The library's default subscription set (webos_client.py) minus the two
+# static info states. Do NOT add channels/current_channel/channel_info:
+# connect-time subscription failures are only tolerated for
+# PyLGTVCmdError/PyLGTVServiceNotFoundError; the channels trio is
+# auto-subscribed lazily and safely once Live TV is in the foreground (plan
+# AD-2). Must stay a list: the library constructor does
 # ``set(states) if isinstance(states, list) else set()``.
+#
+# system_info/software_info are fetched by the integration after connect
+# (``coordinator.async_fetch_static_info``) instead: the library fetches
+# static states without any error handling, and some webOS 24/25 sets
+# answer getSystemInfo with "401 insufficient permissions", which failed
+# every connect and left the TV showing as off.
+STATIC_INFO_STATES = ("system_info", "software_info")
 DEFAULT_STATES = [
-    "system_info",
-    "software_info",
     "power",
     "current_app",
     "muted",

@@ -42,6 +42,7 @@ from bscpylgtv.manifest import MANIFEST
 
 from .const import (
     BSCP_CONNECTION_EXCEPTIONS,
+    COMMAND_TIMEOUT,
     CONF_CLIENT_KEY,
     CONF_MAC,
     DEFAULT_STATES,
@@ -52,6 +53,7 @@ from .const import (
     PROBE_TIMEOUT,
     RECONNECT_TIMEOUT,
     SCAN_INTERVAL,
+    STATIC_INFO_STATES,
 )
 from .key_storage import InMemoryKeyStorage
 
@@ -190,6 +192,27 @@ async def async_probe_device_uuid(
     if isinstance(device_uuid, str) and device_uuid:
         return device_uuid
     return None
+
+
+async def async_fetch_static_info(client: WebOsClient) -> None:
+    """Fetch system/software info onto a connected client, best effort.
+
+    Replaces the library's own connect-time fetch of these static states,
+    which has no error handling: a set that refuses getSystemInfo ("401
+    insufficient permissions", seen on webOS 24/25) would fail the whole
+    connect. Each value is stored on the library attribute behind the
+    public property, so the rest of the integration reads it as usual; a
+    refused or unanswered request leaves that value as None.
+    """
+    for state in STATIC_INFO_STATES:
+        try:
+            value = await asyncio.wait_for(
+                getattr(client, f"get_{state}")(), COMMAND_TIMEOUT
+            )
+        except Exception as err:  # noqa: BLE001 - optional device metadata
+            LOGGER.debug("Could not fetch %s: %r", state, err)
+            continue
+        setattr(client, f"_{state}", value)
 
 
 def release_client(client: WebOsClient | None) -> None:
@@ -409,10 +432,12 @@ class BscpylgtvCoordinator(DataUpdateCoordinator[None]):
                 translation_key="auth_failed",
                 translation_placeholders={"device": self.name},
             ) from err
-        except BSCP_CONNECTION_EXCEPTIONS:
+        except BSCP_CONNECTION_EXCEPTIONS as err:
             # The helper already abandoned the failed candidate(s); the
             # next watchdog tick builds another fresh client.
+            LOGGER.debug("Reconnect to %s failed: %r", self.name, err)
             return False
+        await async_fetch_static_info(self.client)
         update_client_key(self.hass, self.config_entry, self.client)
         update_mac_address(self.hass, self.config_entry, self.client)
         return True

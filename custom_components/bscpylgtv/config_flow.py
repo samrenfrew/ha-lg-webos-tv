@@ -448,7 +448,7 @@ class BscpylgtvConfigFlow(ConfigFlow, domain=DOMAIN):
                 raise
             else:
                 try:
-                    await asyncio.wait_for(client.get_system_info(), COMMAND_TIMEOUT)
+                    await asyncio.wait_for(client.get_software_info(), COMMAND_TIMEOUT)
                 except Exception:  # noqa: BLE001 - stale key or dead link
                     release_client(client)
                 else:
